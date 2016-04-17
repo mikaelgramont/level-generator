@@ -1,17 +1,11 @@
-let ProxyDebugger = require('./proxydebugger');
-
 class HorizontalListRenderer {
-	constructor(spriteList, srcCanvasEl, destCtx, verticalPosition, blockWidth, blockHeight, logger) {
+	constructor(spriteList, srcCanvasEl, destCtx, verticalPosition, blockWidth, blockHeight) {
 		this.spriteList_ = spriteList;
 		this.srcCanvasEl_ = srcCanvasEl;
 		this.destCtx_ = destCtx;
 		this.verticalPosition_ = verticalPosition;
 		this.blockWidth_ = blockWidth;
 		this.blockHeight_ = blockHeight;
-		this.logger_ = logger;
-
-		// this.destCtx_ = ProxyDebugger.instrumentContext(
-		// 	this.destCtx_, 'render', this.logger_, {});
 	}
 
 	render() {

@@ -100,20 +100,14 @@ class Generator {
 
 module.exports = Generator;
 },{}],3:[function(require,module,exports){
-let ProxyDebugger = require('./proxydebugger');
-
 class HorizontalListRenderer {
-	constructor(spriteList, srcCanvasEl, destCtx, verticalPosition, blockWidth, blockHeight, logger) {
+	constructor(spriteList, srcCanvasEl, destCtx, verticalPosition, blockWidth, blockHeight) {
 		this.spriteList_ = spriteList;
 		this.srcCanvasEl_ = srcCanvasEl;
 		this.destCtx_ = destCtx;
 		this.verticalPosition_ = verticalPosition;
 		this.blockWidth_ = blockWidth;
 		this.blockHeight_ = blockHeight;
-		this.logger_ = logger;
-
-		// this.destCtx_ = ProxyDebugger.instrumentContext(
-		// 	this.destCtx_, 'render', this.logger_, {});
 	}
 
 	render() {
@@ -133,64 +127,22 @@ class HorizontalListRenderer {
 }
 
 module.exports = HorizontalListRenderer;
-},{"./proxydebugger":6}],4:[function(require,module,exports){
-class Logger {
-	constructor(global) {
-		this.enabled_ = typeof(global.console) != 'undefined';
-		this._logger = global.console;
-	}
-
-	enable() {
-		this.enabled_ = true;
-	}
-
-	disable() {
-		this.enabled_ = false;
-	}
-
-	log() {
-		if (this.enabled_) {
-			this._logger.log.apply(this._logger, arguments);
-		}
-	}
-
-	group() {
-		if (this.enabled_) {
-			this._logger.group.apply(this._logger, arguments);
-		}
-	}
-
-	groupCollapsed() {
-		if (this.enabled_) {
-			this._logger.groupCollapsed.apply(this._logger, arguments);
-		}
-	}
-
-	groupEnd() {
-		if (this.enabled_) {
-			this._logger.groupEnd.apply(this._logger, arguments);
-		}
-	}
-}
-module.exports = Logger;
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 let BlockListDecorator = require('./block-list-decorator');
 let Generator = require('./generator');
 let HorizontalListRenderer = require('./horizontal-list-renderer');
-let Logger = require('./logger');
 let Transitioner = require('./transitioner');
 let WorldConfig = require('./world-config');
 
+let parentEl = document.getElementById("level-gen-container") || document.body;
 let imgEl = document.createElement("img");
 imgEl.addEventListener("load", () => {
-	// document.body.appendChild(imgEl);
-	const BLOCK_COUNT_H = 30;
-	const BLOCK_COUNT_V = 3;
 	const BLOCK_WIDTH = 32;
 	const BLOCK_HEIGHT = 32;
+	const BLOCK_COUNT_H = Math.ceil(parentEl.clientWidth / BLOCK_WIDTH);
+	const BLOCK_COUNT_V = 3;
 	const VERTICAL_POSITION = (BLOCK_COUNT_V - 1) * BLOCK_HEIGHT;
 
-	let logger = new Logger(window);
 	let initialState = WorldConfig.BLOCK_TYPES.PLATFORM;
 	let transitioner = new Transitioner(
 		WorldConfig.TRANSITIONS,
@@ -198,18 +150,15 @@ imgEl.addEventListener("load", () => {
 	);
 	let generator = new Generator(BLOCK_COUNT_H, transitioner);
 	let blockTypeList = generator.getAll();
-	logger.log("block types", blockTypeList);
 
 	let decorator = new BlockListDecorator(WorldConfig);
 	let spriteTypeList = decorator.decorate(blockTypeList);
-	logger.log("sprite types", spriteTypeList);
 
 	let spriteCanvasEl = document.createElement("canvas");
 	spriteCanvasEl.width = imgEl.width;
 	spriteCanvasEl.height = imgEl.height;
 	let spriteCtx = spriteCanvasEl.getContext("2d");
 	spriteCtx.drawImage(imgEl, 0, 0, imgEl.width, imgEl.height);
-	// document.body.appendChild(spriteCanvasEl);
 
 	let renderCanvasEl = document.createElement("canvas");
 	renderCanvasEl.width = BLOCK_WIDTH * BLOCK_COUNT_H;
@@ -217,14 +166,14 @@ imgEl.addEventListener("load", () => {
 	let renderCtx = renderCanvasEl.getContext("2d");
 	renderCtx.fillStyle = "#2c7bff";
 	renderCtx.fillRect(0, 0, renderCanvasEl.width, renderCanvasEl.height);
-	document.body.appendChild(renderCanvasEl);
+	parentEl.appendChild(renderCanvasEl);
 
 	let horizontalListRenderer = new HorizontalListRenderer(
 		spriteTypeList, spriteCanvasEl, renderCtx, VERTICAL_POSITION,
-		BLOCK_WIDTH, BLOCK_HEIGHT, logger);
+		BLOCK_WIDTH, BLOCK_HEIGHT);
 	horizontalListRenderer.render();
 })
-imgEl.src = "sprites.png";
+imgEl.src = parentEl.getAttribute("data-level-gen-sprite");
 
 
 
@@ -236,42 +185,7 @@ imgEl.src = "sprites.png";
 // TODO: remove the different types of grass from the block type list
 // and start making distinctions later in a second pass, so we can
 // vary the types of things we render.
-},{"./block-list-decorator":1,"./generator":2,"./horizontal-list-renderer":3,"./logger":4,"./transitioner":7,"./world-config":8}],6:[function(require,module,exports){
-let ProxyDebugger = {
-	instrumentContext: (original, logName, logger, modifiers) => {
-		// The object that all calls will go through
-		let proxyObj = {};
-
-		for (let propName in original) {
-			if (original[propName] instanceof Function) {
-				// Proxying methods.
-				proxyObj[propName] = (...args) => {
-					let argsForLogging = args;
-					if (propName in modifiers) {
-						argsForLogging = modifiers[propName](args);
-					}
-					logger.log(`${logName}.${propName}`, argsForLogging);  
-					original[propName].apply(original, args);
-				};
-			} else {
-				// Setters and getters for proxy'ed properties.
-				Object.defineProperty(proxyObj, propName, {
-					set: function(value) {
-					 	original[propName] = value;
-						logger.log(`${logName}.${propName} = ${value}`);
-					},
-					get: function(name)	{
-						return original[propName];
-					}
-				});    
-			}
-		}
-		return proxyObj;
-	}
-}
-
-module.exports = ProxyDebugger;
-},{}],7:[function(require,module,exports){
+},{"./block-list-decorator":1,"./generator":2,"./horizontal-list-renderer":3,"./transitioner":5,"./world-config":6}],5:[function(require,module,exports){
 class Transitioner {
 	/**
 	 * This object handles transitions through Markov chains defined in its
@@ -309,7 +223,7 @@ class Transitioner {
 }
 
 module.exports = Transitioner;
-},{}],8:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // How blocks behave.
 let blockTypes = {
 	EMPTY: 0,
@@ -414,4 +328,4 @@ module.exports = {
 	SPRITE_TYPES : spriteTypes,
 	TRANSITIONS: transitions
 };
-},{}]},{},[5]);
+},{}]},{},[4]);
