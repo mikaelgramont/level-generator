@@ -72,25 +72,27 @@ let transitions = {
 	},
 	1: {
 		// EMPTY
-		0: .25,
+		0: .15,
 		// PLATFORM
-		1: .45,
-		// DANGER_SINGLE
-		2: .15,
-		// DANGER_MULTI
-		3: .15
+		1: .65,
+		// PIPE
+		2: .1,
+		// DANGER
+		3: .1
 	},
+	// PIPE
 	2: {
-		// DANGER_SINGLE
-		2: .8,
-		// DANGER_MULTI
-		3: .2
+		// PIPE 
+		1: .6,
+		// DANGER
+		3: .4
 	},
+	// DANGER
 	3: {
 		// PLATFORM
-		1: .6,
-		// DANGER_MULTI
-		3: .4
+		1: .8,
+		// DANGER
+		3: .2
 	}
 };
 
