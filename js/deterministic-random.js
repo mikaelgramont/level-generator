@@ -1,4 +1,8 @@
 class DeterministicRandom {
+	/**
+	 * As the funny class name might indicate, this class is used to force the values that
+	 * a random object is going to return. This is useful to write tests.
+	 */
 	constructor(sequence) {
 		this.sequence_ = sequence;
 		this.index = 0;

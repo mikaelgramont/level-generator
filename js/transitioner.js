@@ -1,4 +1,8 @@
 class Transitioner {
+	/**
+	 * This object handles transitions through Markov chains defined in its
+	 * constructor arguments.
+	 */
 	constructor(transitions, initialState, randomObj) {
 		this.transitions_ = transitions;
 		this.currentState_ = initialState;

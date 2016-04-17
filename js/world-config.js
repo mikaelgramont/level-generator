@@ -1,3 +1,4 @@
+// The type of blocks we can deal with
 let blockTypes = {
 	EMPTY: 0,
 	GRASS_CONTINUOUS: 1,
@@ -5,6 +6,7 @@ let blockTypes = {
 	GRASS_RIGHT_EDGE: 3
 };
 
+// Markov chain definitions.
 let transitions = {
 	// EMPTY
 	0: {
