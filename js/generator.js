@@ -1,5 +1,3 @@
-let WorldConfig = require('./world-config');
-
 class Generator {
 	/**
 	 * This class manages a transitioner object.

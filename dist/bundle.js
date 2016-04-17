@@ -1,7 +1,75 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-let WorldConfig = require('./world-config');
+class BlockListDecorator {
+	constructor(config) {
+		this.config_ = config;
+	}
 
+	decorate(blockTypeList) {
+		let spriteTypeList = [];
+		let sections = this.generateSections(blockTypeList);
+		sections.forEach((section) => {
+			spriteTypeList = spriteTypeList.concat(this.processSection(section));
+		})
+		return spriteTypeList;
+	}
+
+	generateSections(fullList) {
+		let lastType = null;
+		let currentSection = null;
+		let sections = [];
+
+		fullList.forEach((currentBlockType) => {
+			if (currentBlockType !== lastType) {
+				if (currentSection !== null) {
+					sections.push(currentSection);
+				}
+				currentSection = [];
+			}
+			currentSection.push(currentBlockType);
+			lastType = currentBlockType;
+		});
+		if (currentSection !== null) {
+			sections.push(currentSection);
+		}
+		return sections;
+	}
+
+	processSection(section) {
+		// - if empty section, return array of 0s
+		// - build a sprite type section
+		// - if length is 1, use single
+		// - otherwise fill with continuous, adjust edges
+		if (!section.length) {
+			return [];
+		}
+
+		let sprites = [];
+		let blockType = section[0];
+
+		if (section.length == 1) {
+			sprites[0] = this.config_.SPRITE_TYPES[blockType][4];
+		} else {
+			// Can't seem to use Array.fill in phantomjs
+			for(let i = 0, l = section.length; i < l; i++) {
+				if (i == 0) {
+					sprites[i] = this.config_.SPRITE_TYPES[blockType][2];
+				} else if (i == l - 1) {
+					sprites[i] = this.config_.SPRITE_TYPES[blockType][3];
+				} else {
+					sprites[i] = this.config_.SPRITE_TYPES[blockType][1];
+				}
+			}
+		}
+		return sprites;
+	}
+}
+
+module.exports = BlockListDecorator;
+},{}],2:[function(require,module,exports){
 class Generator {
+	/**
+	 * This class manages a transitioner object.
+	 */
 	constructor(size, transitioner) {
 		this.steps_ = 0;
 		this.size_ = size;
@@ -31,7 +99,7 @@ class Generator {
 }
 
 module.exports = Generator;
-},{"./world-config":5}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 class Logger {
 	constructor(global) {
 		this.enabled_ = typeof(global.console) != 'undefined';
@@ -71,29 +139,41 @@ class Logger {
 	}
 }
 module.exports = Logger;
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
+let BlockListDecorator = require('./block-list-decorator');
 let Generator = require('./generator');
 let Logger = require('./logger');
 let Transitioner = require('./transitioner');
 let WorldConfig = require('./world-config');
 
 const SIZE = 30;
-const RUNS = 1
 
 let logger = new Logger(window);
-let initialState = WorldConfig.BLOCK_TYPES.GRASS_CONTINUOUS;
+let initialState = WorldConfig.BLOCK_TYPES.PLATFORM;
 let transitioner = new Transitioner(
 	WorldConfig.TRANSITIONS,
 	initialState
 );
 let generator = new Generator(SIZE, transitioner);
-for(let i = 0; i < RUNS; i++) {
-	let blockTypes = generator.getAll();
-	logger.log("block types", i, blockTypes);
-	generator.reset(initialState);
-}
-},{"./generator":1,"./logger":2,"./transitioner":4,"./world-config":5}],4:[function(require,module,exports){
+let blockTypeList = generator.getAll();
+logger.log("block types", blockTypeList);
+
+let decorator = new BlockListDecorator(WorldConfig);
+let spriteTypeList = decorator.decorate(blockTypeList);
+logger.log("sprite types", spriteTypeList);
+
+// TODO: break up a canvas element into the right amount of blocks
+// pull up a sprite sheet, and render accordingly.
+
+// TODO: remove the different types of grass from the block type list
+// and start making distinctions later in a second pass, so we can
+// vary the types of things we render.
+},{"./block-list-decorator":1,"./generator":2,"./logger":3,"./transitioner":5,"./world-config":6}],5:[function(require,module,exports){
 class Transitioner {
+	/**
+	 * This object handles transitions through Markov chains defined in its
+	 * constructor arguments.
+	 */
 	constructor(transitions, initialState, randomObj) {
 		this.transitions_ = transitions;
 		this.currentState_ = initialState;
@@ -126,46 +206,107 @@ class Transitioner {
 }
 
 module.exports = Transitioner;
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+// How blocks behave.
 let blockTypes = {
 	EMPTY: 0,
-	GRASS_CONTINUOUS: 1,
-	GRASS_LEFT_EDGE: 2,
-	GRASS_RIGHT_EDGE: 3
+	PLATFORM: 1,
+	PIPE: 2,
+	DANGER: 3
 };
 
+let positionTypes = {
+	EMPTY: 0,
+	CONTINUOUS: 1,
+	LEFT_EDGE: 2,
+	RIGHT_EDGE: 3,
+	SINGLE: 4
+};
+
+let spriteTypes = {
+	// EMPTY
+	0: {
+		// CONTINUOUS
+		1: 0,
+		// LEFT_EDGE
+		2: 0,
+		// RIGHT_EDGE
+		3: 0,
+		// SINGLE
+		4: 0		
+	},
+	// PLATFORM
+	1: {
+		// CONTINUOUS
+		1: 1,
+		// LEFT_EDGE
+		2: 2,
+		// RIGHT_EDGE
+		3: 3,
+		// SINGLE
+		4: 4
+	},
+	// PIPE
+	2: {
+		// CONTINUOUS
+		1: 5,
+		// LEFT_EDGE
+		2: 5,
+		// RIGHT_EDGE
+		3: 5,
+		// SINGLE
+		4: 5
+	},
+	// DANGER
+	3: {
+		// CONTINUOUS
+		1: 6,
+		// LEFT_EDGE
+		2: 6,
+		// RIGHT_EDGE
+		3: 6,
+		// SINGLE
+		4: 6
+	}
+};
+
+// Markov chain definitions.
 let transitions = {
 	// EMPTY
 	0: {
 		// EMPTY
-		0: .3,
-		// GRASS_LEFT_EDGE
-		2: .7
+		0: .1,
+		// PLATFORM
+		1: .9
 	},
 	1: {
-		// GRASS_CONTINUOUS
-		1: .8,
-		// GRASS_RIGHT_EDGE
-		3: .2
+		// EMPTY
+		0: .25,
+		// PLATFORM
+		1: .45,
+		// DANGER_SINGLE
+		2: .15,
+		// DANGER_MULTI
+		3: .15
 	},
 	2: {
-		// GRASS_CONTINUOUS
-		1: .7,
-		// GRASS_RIGHT_EDGE
-		3: .3
+		// DANGER_SINGLE
+		2: .8,
+		// DANGER_MULTI
+		3: .2
 	},
 	3: {
-		// EMPTY
-		0: .1,
-		// GRASS_CONTINUOUS
-		1: .8,
-		// GRASS_RIGHT_EDGE
-		3: .1
+		// PLATFORM
+		1: .6,
+		// DANGER_MULTI
+		3: .4
 	}
 };
 
 module.exports = {
-	BLOCK_TYPES : blockTypes,
+	BLOCK_TYPES: blockTypes,
+	POSITION_TYPES: positionTypes,
+	SPRITE_TYPES : spriteTypes,
 	TRANSITIONS: transitions
 };
-},{}]},{},[3]);
+},{}]},{},[4]);
