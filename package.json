@@ -20,9 +20,9 @@
     "watchify": "^3.7.0"
   },
   "scripts": {
-    "build": "browserify js/main.js > dist/bundle.js",
+    "build": "watchify js/main.js -o dist/bundle.js",
     "debug-build": "browserify --debug js/main.js > dist/bundle-debug.js",
-    "test": "karma start"
+    "tests": "karma start"
   },
   "repository": {
     "type": "git",
